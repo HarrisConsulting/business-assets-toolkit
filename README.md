@@ -1,6 +1,6 @@
 # business-assets-toolkit
 
-This page some of the **best GitHub repositories** for creating business assets such as logos, templates, documents, and branding materials:
+This page includes some of the **best GitHub repositories** for creating business assets such as logos, templates, documents, and branding materials:
 
 ### **1. Logo & Icon Resources**
 - **[Simple Icons](https://github.com/simple-icons/simple-icons):** SVG icons for popular brands; great for logos, brand assets, and social links.
@@ -21,8 +21,6 @@ This page some of the **best GitHub repositories** for creating business assets 
 
 ### **Tips:**
 - Explore GitHub Topics like [branding](https://github.com/topics/branding), [logos](https://github.com/topics/logos), [logo-design](https://github.com/topics/logo-design), or [templates](https://github.com/topics/templates) for even more resources.
-
-Let me know if you'd like recommendations for more specific needs, such as pitch decks, invoices, landing pages, or document generators!
 
 ---
 
