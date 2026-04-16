@@ -1,5 +1,4 @@
 # business-assets-toolkit
-personal "knowledge base" or "resources" repository 
 
 This page some of the **best GitHub repositories** for creating business assets such as logos, templates, documents, and branding materials:
 
