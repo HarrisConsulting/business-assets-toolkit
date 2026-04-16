@@ -20,7 +20,7 @@ This page some of the **best GitHub repositories** for creating business assets 
 - **[Documenso](https://github.com/documenso/documenso):** Open-source document signing and PDF workflow tool for business documents.
 
 ### **Tips:**
-- Explore GitHub Topics like [branding](https://github.com/topics/branding)[[4]](https://github.com/topics/branding), [logos](https://github.com/topics/logos)[[6]](https://github.com/topics/logos), [logo-design](https://github.com/topics/logo-design)[[5]](https://github.com/topics/logo-design), or [templates](https://github.com/topics/templates) for even more resources.
+- Explore GitHub Topics like [branding](https://github.com/topics/branding), [logos](https://github.com/topics/logos), [logo-design](https://github.com/topics/logo-design), or [templates](https://github.com/topics/templates) for even more resources.
 
 Let me know if you'd like recommendations for more specific needs, such as pitch decks, invoices, landing pages, or document generators!
 
@@ -29,6 +29,3 @@ Let me know if you'd like recommendations for more specific needs, such as pitch
 1. [LogoHub - Open-source Logo Repository](https://logohub.dev/)
 2. [branding-assets · GitHub Topics · GitHub](https://github.com/topics/branding-assets)
 3. [GitHub - bradtraversy/design-resources-for-developers: Curated list of ...](https://github.com/bradtraversy/design-resources-for-developers)
-4. [branding · GitHub Topics · GitHub](https://github.com/topics/branding)
-5. [logo-design · GitHub Topics · GitHub](https://github.com/topics/logo-design)
-6. [logos · GitHub Topics · GitHub](https://github.com/topics/logos)
