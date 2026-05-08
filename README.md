@@ -26,6 +26,7 @@ All reference guides and curated resource documents live here.
 |:-----|:------------|
 | [business-assets-toolkit.md](./docs/business-assets-toolkit.md) | Curated list of the best GitHub repositories for business assets — covers branding, logos, design templates, AI workflows, investor tools, and physical/AR assets (Standard + Advanced 2026+) |
 | [openai-codex-goal-guide.md](./docs/openai-codex-goal-guide.md) | Comprehensive guide to using the `/goal` feature in OpenAI Codex CLI (v0.128+) — autonomous agent mode, the Ralph Loop, best practices by use case, the `MERGE_CHECK.md` pattern, and safety guardrails |
+| [supabase-branching-guide.md](./docs/supabase-branching-guide.md) | Novice-friendly guide to Supabase's Git-free database branching feature — use cases, workflow optimization, and two concrete examples (React Native app + standalone web app) |
 
 ---
 
@@ -46,6 +47,7 @@ This repo is intended to grow — new guides, resource lists, and templates will
 - Prompt Engineering & Vertical AI
 - AR / Physical-World Business Assets
 - Developer Tools & CLI Guides
+- Database Management & Supabase Workflows
 
 ---
 
