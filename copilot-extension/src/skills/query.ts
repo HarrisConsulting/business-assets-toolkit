@@ -2,6 +2,8 @@ import { gpt } from '../utils/openai';
 import { documentStore } from '../utils/store';
 import type { SkillInput } from './ingest';
 
+const MAX_CITATION_LENGTH = 240;
+
 const tokenize = (value: string): Set<string> =>
   new Set(
     value
@@ -75,7 +77,9 @@ export const query = async (input: SkillInput): Promise<string[]> => {
       ({ chunk, relevance }) =>
         `- **Chunk ${chunk.index + 1}** (score: ${relevance.toFixed(
           2,
-        )}): ${chunk.text.slice(0, 240)}${chunk.text.length > 240 ? '…' : ''}`,
+        )}): ${chunk.text.slice(0, MAX_CITATION_LENGTH)}${
+          chunk.text.length > MAX_CITATION_LENGTH ? '…' : ''
+        }`,
     ),
   ];
 };

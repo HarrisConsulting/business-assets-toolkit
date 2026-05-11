@@ -11,6 +11,8 @@ export interface ChunkingResult {
   totalTokens: number;
 }
 
+export const DEFAULT_MAX_TOKENS = 1500;
+
 const encoding = get_encoding('cl100k_base');
 
 export const countTokens = (text: string): number => encoding.encode(text).length;
@@ -68,7 +70,10 @@ const toSemanticSegments = (text: string): string[] => {
   return segments;
 };
 
-export const chunkText = (text: string, maxTokens = 1500): ChunkingResult => {
+export const chunkText = (
+  text: string,
+  maxTokens = DEFAULT_MAX_TOKENS,
+): ChunkingResult => {
   const safeText = text.trim();
   if (!safeText) {
     return { chunks: [], totalTokens: 0 };

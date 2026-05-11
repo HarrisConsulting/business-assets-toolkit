@@ -6,10 +6,6 @@ import { themes } from '../skills/themes';
 import { parseMessage } from '../utils/parser';
 import type { CopilotMessage } from '../utils/parser';
 
-export interface AgentContext {
-  githubToken: string;
-}
-
 const helpMessage = (): string[] => [
   'I can help with long-document analysis. Try one of these:',
   '- `@doc-analyst ingest this: <paste long document>`',
@@ -27,13 +23,7 @@ const toSkillInput = (parsed: ReturnType<typeof parseMessage>): SkillInput => ({
 
 export const handleAgentMessages = async function* (
   messages: CopilotMessage[],
-  context: AgentContext,
 ): AsyncGenerator<string> {
-  if (!context.githubToken) {
-    yield 'Missing GitHub identity token.';
-    return;
-  }
-
   const parsed = parseMessage(messages);
   const input = toSkillInput(parsed);
 

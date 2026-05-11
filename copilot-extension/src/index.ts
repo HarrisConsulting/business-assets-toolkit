@@ -73,7 +73,7 @@ app.post('/', async (req, res) => {
   try {
     const messages = extractMessages(req.body);
 
-    for await (const text of handleAgentMessages(messages, { githubToken })) {
+    for await (const text of handleAgentMessages(messages)) {
       writeSse(res, createTextPayload(text));
     }
   } catch (error) {

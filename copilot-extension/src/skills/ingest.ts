@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { chunkText } from '../utils/chunker';
+import { chunkText, DEFAULT_MAX_TOKENS } from '../utils/chunker';
 import { documentStore } from '../utils/store';
 
 export interface SkillInput {
@@ -27,7 +27,7 @@ export const ingest = async (input: SkillInput): Promise<string[]> => {
     ];
   }
 
-  const { chunks, totalTokens } = chunkText(rawText, 1500);
+  const { chunks, totalTokens } = chunkText(rawText, DEFAULT_MAX_TOKENS);
   if (chunks.length === 0) {
     return ['No readable content was found. Please provide non-empty text.'];
   }

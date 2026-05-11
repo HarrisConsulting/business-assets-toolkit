@@ -25,7 +25,7 @@ export interface ParsedIntent {
 }
 
 const DOCUMENT_ID_REGEX =
-  /\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/i;
+  /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/i;
 
 const toText = (content: CopilotMessage['content']): string => {
   if (!content) {
