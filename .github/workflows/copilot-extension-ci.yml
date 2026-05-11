@@ -8,6 +8,9 @@ on:
     paths:
       - 'copilot-extension/**'
 
+permissions:
+  contents: read
+
 jobs:
   build-and-lint:
     runs-on: ubuntu-latest

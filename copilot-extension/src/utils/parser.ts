@@ -92,9 +92,16 @@ const extractRawText = (message: string): string | undefined => {
 
 const extractQuestion = (message: string): string | undefined => {
   const withoutDocId = message.replace(DOCUMENT_ID_REGEX, '').trim();
-  const explicit = withoutDocId.match(/question\s*:\s*(.+)$/i);
-  if (explicit?.[1]) {
-    return explicit[1].trim();
+  const keywordIndex = withoutDocId.toLowerCase().indexOf('question');
+  if (keywordIndex >= 0) {
+    const remainder = withoutDocId.slice(keywordIndex + 'question'.length);
+    const colonIndex = remainder.indexOf(':');
+    if (colonIndex >= 0) {
+      const explicitQuestion = remainder.slice(colonIndex + 1).trim();
+      if (explicitQuestion) {
+        return explicitQuestion;
+      }
+    }
   }
 
   const normalized = withoutDocId.replace(/\b(query|question|ask)\b\s*:?\s*/i, '');
