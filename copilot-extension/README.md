@@ -55,6 +55,7 @@ docker run --rm -p 3000:3000 --env-file .env doc-analyst
 | Variable | Required | Description |
 |---|---|---|
 | `OPENAI_API_KEY` | ✅ | Your OpenAI API key |
+| `OPENAI_MODEL` | ❌ | Chat model to use (default: `gpt-4o`) |
 | `PORT` | ❌ | Server port (default: 3000) |
 
 ## Notes

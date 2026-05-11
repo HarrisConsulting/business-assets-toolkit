@@ -17,7 +17,7 @@ const getClient = (): OpenAI => {
 
 export const gpt = async (system: string, user: string): Promise<string> => {
   const response = await getClient().chat.completions.create({
-    model: 'gpt-4o',
+    model: process.env.OPENAI_MODEL ?? 'gpt-4o',
     temperature: 0.2,
     messages: [
       { role: 'system', content: system },
