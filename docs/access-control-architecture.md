@@ -15,11 +15,11 @@
 The original `access-control-policy-spec.md` grew bottom-up from two concrete needs:
 
 1. Stop Supplies users from approving their **own** orders.
-2. Restrict the New School Connect (App Admin) portal to assigned admin staff because of
-   data sensitivity.
+2. Restrict the New School Connect (NSC App Admin) portal to assigned admin staff because
+   of data sensitivity.
 
 A general "portals + roles + employee types" framework was then retrofitted on top. The
-result reasoned **type → role → permission** (employee type drives access). A structured
+result reasoned **type -> role -> permission** (employee type drives access). A structured
 review surfaced that this inversion was the *root cause* of nearly every conflict in the
 spec:
 
@@ -46,7 +46,8 @@ above dissolve rather than needing special-case handling.
 2. **Roles are bundles of permissions — nothing more.** A role is a named, reusable set of
    permission IDs. Roles carry no logic, no scope, and no identity of their own.
 3. **Roles are portal-self-contained.** Every role belongs to exactly one portal. The only
-   exception is `super_admin_override`, which is the single cross-portal role.
+   exception is `super_admin_override`, which is the single cross-portal role. (There is no
+   generic, cross-portal `viewer` role; each portal defines its own read role — see C-15.)
 4. **Employee type grants nothing by itself.** Employee type is only an **input to default
    assignment**. It never directly confers access. (This finally satisfies the policy
    spec's Governance Rule #1 literally.)
@@ -57,7 +58,7 @@ above dissolve rather than needing special-case handling.
    what that means; it never silently redefines identity.
 7. **Scope is resolved live, never frozen.** A user's order/visibility scope is intersected
    at resolution time from their current Staff Directory assignment, so role changes
-   (e.g., teacher → administration) take effect by editing the directory alone.
+   (e.g., teacher -> administration) take effect by editing the directory alone.
 8. **Least privilege by default.** Default bundles contain the narrowest reasonable set of
    permissions. Elevated permissions are explicit, separately assignable, and auditable.
 9. **High-risk controls are enforced at the database level; human-awareness alerts are
@@ -73,37 +74,80 @@ LAYER 1 — PERMISSIONS  (the atoms)
   Fine-grained, action-level, portal-scoped capabilities.
     supplies.order.create
     supplies.order.approve
-    eds.payroll.view
-    appadmin.access.grant
+    eds.payroll.edit
+    nsc-app-admin.access.grant
     global.super_admin_override
 
 LAYER 2 — ROLES  (named bundles of permissions)
   Reusable, portal-scoped. A role is ONLY a set of permission IDs.
     finance_approver         = { supplies.order.approve }
     confidential_hr_reviewer = { eds.record.view_confidential_notes }
-    super_admin_override     = { global.super_admin_override }   ← the only cross-portal role
+    super_admin_override     = { global.super_admin_override }   <- the only cross-portal role
 
-LAYER 3 — DEFAULT ASSIGNMENTS  (the convenience matrix, per portal)
+LAYER 3 — DEFAULT ASSIGNMENTS  (the initial-state matrix, per portal)
   "For portal P, employee_type T receives these roles by default."
-  Rendered as the Role Templates tab. A STARTING POINT, not authority.
-    Supplies × teacher    -> program_requester
-    EDS      × leadership -> executive_hr_admin
+  DEFINED in the Selection Matrix tab. A STARTING POINT, not authority.
+    Supplies x teacher    -> program_requester
+    EDS      x leadership -> executive_hr_admin
   (super_admin_override is NEVER a default in any matrix.)
 
 LAYER 4 — ASSIGNMENTS & OVERRIDES  (per person, always wins)
-  Rendered as the Portal Access tab. Grant or revoke roles OR individual
+  Managed in the Portal Access tab. Grant or revoke roles OR individual
   permissions per person, with expires_at + granted_by.
 ```
 
-### Mapping to the existing User Access Control Panel
+### Mapping to the User Access Control Panel tabs
 
-The live DMS already exposes the three tabs this model needs:
+The User Access Control Panel exposes the tabs this model needs:
 
-| UI tab (existing)  | Layer | Responsibility |
-|--------------------|-------|----------------|
-| **Staff Directory**| Input | Source of identity: employee type, unit, program/function. |
-| **Role Templates** | 3     | Default `(portal x employee_type) -> roles` matrices. |
-| **Portal Access**  | 4     | Per-person role/permission grants & revocations (override defaults). |
+| UI tab            | Layer | Responsibility |
+|-------------------|-------|----------------|
+| **Staff Directory** | Input | Source of identity: employee type, unit, program/function. |
+| **Selection Matrix** | 3   | **Defines** each portal's permissions, roles, and `(portal x employee_type) -> default roles` initial state. The system-design tab, used once per portal. |
+| **Quick Setup**   | 3 (applies) | **Applies** the matrix defaults to a single employee on demand (e.g., when a teacher becomes admin_staff). Reads the matrix; never redefines it. All portals are available here. |
+| **Portal Access** | 4     | Per-person, per-permission grants & revocations that **override** defaults. |
+
+> **Authority chain:** **Selection Matrix defines** the initial state -> **Quick Setup applies**
+> it per user -> **Portal Access fine-tunes** per user/permission. The Selection Matrix is the
+> single source of truth for what the defaults *are*; Quick Setup is a faithful applicator.
+
+---
+
+## Portal Lifecycle (de novo -> live)
+
+Standing up a new portal (e.g., Employee Data System) follows four steps:
+
+```
+1. CREATE PORTAL
+   Register the portal: stable identifier, case-sensitive display name,
+   lifecycle_status (planned | active | read_only).
+
+2. CONFIGURE IN SELECTION MATRIX TAB
+   Define this portal's permission catalog, its roles (bundles of those
+   permissions), and its employee_type -> default-role matrix (the INITIAL
+   STATE for portal-wide permissions). One matrix per portal
+   ("one portal, one matrix"). High-security portals (EDS, NSC App Admin)
+   define narrow defaults (e.g., the self-service bundle); elevated roles are
+   NOT defaulted.
+
+3. SYSTEM AUTO-ASSIGNS DEFAULTS
+   The resolution engine applies the Layer-3 initial state to employees by
+   employee_type. This sets portal-wide starting permissions.
+
+4. VIEW / UPDATE IN PORTAL ACCESS
+   Admins view and adjust any individual's access for the selected portal
+   (grant/revoke roles or single permissions, with expires_at + granted_by).
+   Overrides always win.
+```
+
+**Quick Setup vs. Selection Matrix.** The Selection Matrix sets the *initial state* of
+portal-wide permissions (done once per portal). Quick Setup applies those same defaults to a
+*single user* on demand — for example, when an employee changes from `teacher` to
+`admin_staff`, Quick Setup re-derives their correct defaults. **Therefore all portals —
+including high-security EDS and NSC App Admin — must be available in Quick Setup.** Safety
+comes from the matrix defining a *safe* default per employee_type (e.g., `admin_staff`'s EDS
+default is the self-service bundle, **not** `general_hr_operator`), which Quick Setup then
+faithfully applies. Quick Setup keeps any access a user already has.
 
 ---
 
@@ -186,11 +230,30 @@ Scope is a two-level hierarchy. The same schema field stores the child; the UI l
 
 ---
 
+## Canonical Portal Names & Identifiers
+
+Display names are **case-sensitive** front-end strings. The earlier identifiers `employees`
+and `appadmin` were mutations and are **not** valid portal identifiers; use the canonical
+values below.
+
+| Display name (case-sensitive)          | Identifier / namespace | Lifecycle | Notes |
+|----------------------------------------|------------------------|-----------|-------|
+| **Supplies**                           | `supplies`             | active    | |
+| **NSC App Admin**                      | `nsc-app-admin`        | active    | NSC = New School Connect; subrepo name; high-security. |
+| **Employee Data System** (EDS)         | `eds`                  | active    | Acronym EDS acceptable; high-security. |
+| **Events**                             | `events`               | planned   | Read-only until built. |
+| **SIMS** (Student Information Management System) | `sims`        | planned   | TBD. |
+
+Both acronym and long-form display names are acceptable; the long-form is the canonical
+display name with the acronym/identifier shown alongside.
+
+---
+
 ## Permission Catalog
 
-Permissions are namespaced `portal.resource.action`. The catalog below covers the portals
-in scope today plus reserved namespaces for planned portals. Each portal owns its own
-vocabulary; adding a portal means adding its namespace, **not** changing the engine.
+Permissions are namespaced `portal.resource.action` (the portal segment is the canonical
+identifier above). Each portal owns its own vocabulary; adding a portal means adding its
+namespace, **not** changing the engine.
 
 ### `global.*` (cross-portal — super admin only)
 
@@ -202,11 +265,11 @@ vocabulary; adding a portal means adding its namespace, **not** changing the eng
 
 | Permission                       | Description                                              |
 |----------------------------------|----------------------------------------------------------|
+| `supplies.order.view_own`        | View one's own submitted orders.                         |
+| `supplies.order.view_program`    | View orders within one's program/function scope.        |
 | `supplies.order.create`          | Create a new order request.                              |
 | `supplies.order.edit_own_draft`  | Edit one's own draft order.                              |
 | `supplies.order.submit`          | Submit an order request.                                 |
-| `supplies.order.view_own`        | View one's own submitted orders.                         |
-| `supplies.order.view_program`    | View orders within one's program/function scope.        |
 | `supplies.order.mark_delivered`  | Mark an item delivered (within role scope).             |
 | `supplies.order.deny`            | Deny an order request.                                   |
 | `supplies.order.approve`         | Approve an order request (finance authority).           |
@@ -214,7 +277,7 @@ vocabulary; adding a portal means adding its namespace, **not** changing the eng
 | `supplies.vendor.manage_ops`     | Manage operations-scope vendors.                        |
 | `supplies.budget.manage`         | Manage budget settings.                                  |
 
-### `eds.*` (Employee Data System — the policy spec's "Employees")
+### `eds.*` (Employee Data System)
 
 | Permission                          | Description                                              |
 |-------------------------------------|----------------------------------------------------------|
@@ -228,7 +291,7 @@ vocabulary; adding a portal means adding its namespace, **not** changing the eng
 | `eds.documents.manage`              | Manage employee documents school-wide.                  |
 | `eds.payroll.edit`                  | Edit payroll / tax / banking data.                      |
 
-> **E-1 resolution:** There is **no** `eds.confidential_notes.view_own` default grant.
+> **E-1 resolution:** There is **no** confidential-notes-on-own-record default grant.
 > The vague `self_service_employee` catch-all is **deprecated** (see Migration Notes). An
 > employee's default EDS access is composed of explicit own-record atoms
 > (`eds.profile.*`, `eds.pay.view_own`, `eds.documents.upload_own`,
@@ -236,19 +299,19 @@ vocabulary; adding a portal means adding its namespace, **not** changing the eng
 > notes remain a leadership-gated permission, grantable per person via Portal Access if a
 > specific case ever warrants it.
 
-### `appadmin.*` (New School Connect admin portal)
+### `nsc-app-admin.*` (NSC App Admin)
 
-| Permission                         | Description                                                |
-|------------------------------------|------------------------------------------------------------|
-| `appadmin.support.operate`         | Perform support tasks (email changes, verification, etc.). |
-| `appadmin.comms.broadcast`         | Send communications / broadcasts / messaging follow-up.    |
-| `appadmin.operate`                 | Operate day-to-day App Admin areas.                        |
-| `appadmin.access.grant`            | Grant / revoke App Admin access (access control).          |
-| `appadmin.config`                  | System configuration (technical).                          |
-| `appadmin.security`                | Security settings (technical).                             |
-| `appadmin.audit.integrity`         | Audit-log integrity controls (technical).                  |
-| `appadmin.messaging.global_rules`  | Global messaging rules (technical).                        |
-| `appadmin.override.tools`          | Technical override tools.                                   |
+| Permission                                | Description                                                |
+|-------------------------------------------|------------------------------------------------------------|
+| `nsc-app-admin.support.operate`           | Perform support tasks (email changes, verification, etc.). |
+| `nsc-app-admin.comms.broadcast`           | Send communications / broadcasts / messaging follow-up.    |
+| `nsc-app-admin.operate`                   | Operate day-to-day App Admin areas.                        |
+| `nsc-app-admin.access.grant`              | Grant / revoke App Admin access (access control).          |
+| `nsc-app-admin.config`                    | System configuration (technical).                          |
+| `nsc-app-admin.security`                  | Security settings (technical).                             |
+| `nsc-app-admin.audit.integrity`           | Audit-log integrity controls (technical).                  |
+| `nsc-app-admin.messaging.global_rules`    | Global messaging rules (technical).                        |
+| `nsc-app-admin.override.tools`            | Technical override tools.                                   |
 
 ### Reserved namespaces (planned portals)
 
@@ -261,36 +324,38 @@ vocabulary; adding a portal means adding its namespace, **not** changing the eng
 ## Role Definitions (roles as permission bundles)
 
 Every role below is a **named set of permission IDs**. Roles are portal-scoped except
-`super_admin_override`.
+`super_admin_override`. Per **C-15**, each portal defines its **own** read role (no generic
+cross-portal `viewer`).
 
 ### Supplies
 
 | Role                       | Permissions |
 |----------------------------|-------------|
-| `program_requester`        | `supplies.order.create`, `supplies.order.edit_own_draft`, `supplies.order.submit`, `supplies.order.view_own`, `supplies.order.view_program`, `supplies.order.mark_delivered` |
+| `supplies_viewer`          | `supplies.order.view_own`, `supplies.order.view_program` |
+| `program_requester`        | `supplies_viewer` + `supplies.order.create`, `supplies.order.edit_own_draft`, `supplies.order.submit`, `supplies.order.mark_delivered` |
 | `teacher_proxy_requester`  | *Same as `program_requester`* (assigned with an expiration; scope limited to supported program) |
-| `operations_requester`     | `supplies.order.create`, `supplies.order.edit_own_draft`, `supplies.order.submit`, `supplies.order.view_own`, `supplies.order.view_program`, `supplies.order.mark_delivered`, `supplies.vendor.manage_ops` |
+| `operations_requester`     | *Same as `program_requester`* + `supplies.vendor.manage_ops` |
 | `portal_operations_manager`| All `program_requester` permissions + `supplies.order.deny`, `supplies.vendor.manage`, `supplies.budget.manage` |
 | `finance_approver`         | `supplies.order.approve` |
 | `portal_executive_override`| All standard Supplies permissions **except** that the role itself confers **no** self-approval bypass (see Separation of Duties) |
 
-### EDS (Employees)
+### EDS (Employee Data System)
 
 | Role                       | Permissions |
 |----------------------------|-------------|
-| *(employee default bundle)*| `eds.profile.view_own`, `eds.profile.edit_own`, `eds.pay.view_own`, `eds.documents.upload_own`, `eds.evaluations.view_own` — replaces deprecated `self_service_employee` |
+| `eds_self_service`         | `eds.profile.view_own`, `eds.profile.edit_own`, `eds.pay.view_own`, `eds.documents.upload_own`, `eds.evaluations.view_own` — replaces deprecated `self_service_employee` |
 | `general_hr_operator`      | `eds.record.manage`, `eds.documents.manage` |
 | `confidential_hr_reviewer` | `eds.record.view_confidential_notes` |
-| `executive_hr_admin`       | `eds.record.manage`, `eds.documents.manage`, `eds.record.view_confidential_notes`, `eds.payroll.edit` (+ all own-record atoms) |
+| `executive_hr_admin`       | `eds_self_service` + `eds.record.manage`, `eds.documents.manage`, `eds.record.view_confidential_notes`, `eds.payroll.edit` |
 
-### App Admin
+### NSC App Admin
 
 | Role                     | Permissions |
 |--------------------------|-------------|
-| `program_app_support`    | `appadmin.support.operate`, `appadmin.comms.broadcast` (scope: own + assigned support program) |
-| `nsc_operations_admin`   | `appadmin.support.operate`, `appadmin.comms.broadcast`, `appadmin.operate` |
+| `program_app_support`    | `nsc-app-admin.support.operate`, `nsc-app-admin.comms.broadcast` (scope: own + assigned support program) |
+| `nsc_operations_admin`   | `nsc-app-admin.support.operate`, `nsc-app-admin.comms.broadcast`, `nsc-app-admin.operate` |
 | `nsc_operations_delegate`| *Same as `nsc_operations_admin`* (assigned with an expiration) |
-| `app_access_admin`       | All `nsc_operations_admin` permissions + `appadmin.access.grant` |
+| `app_access_admin`       | All `nsc_operations_admin` permissions + `nsc-app-admin.access.grant` |
 
 ### Global
 
@@ -298,11 +363,13 @@ Every role below is a **named set of permission IDs**. Roles are portal-scoped e
 |-----------------------|-------------|
 | `super_admin_override`| `global.super_admin_override` (resolves to **all** permissions across **all** portals). Leadership-only. **Break-glass — not a daily driver.** |
 
-> **Deprecated:** `self_service_employee` (replaced by explicit EDS own-record atoms).
+> **Deprecated:** `self_service_employee` (replaced by the explicit `eds_self_service`
+> bundle) and any generic cross-portal `viewer` (replaced by portal-specific read roles such
+> as `supplies_viewer`).
 
 ---
 
-## Default Assignment Matrices (Layer 3)
+## Default Assignment Matrices (Layer 3 — the Selection Matrix initial state)
 
 `super_admin_override` is **never** a default. It is granted only explicitly, only to
 `leadership`, and only rarely.
@@ -323,18 +390,22 @@ Every role below is a **named set of permission IDs**. Roles are portal-scoped e
 > plus `leadership` where appropriate. *(E-3 resolution: the "finance/admin leadership
 > subgroup" is simply "people granted `finance_approver`," not a hidden subtype.)*
 
-### EDS (Employees)
+### EDS (Employee Data System)
 
 | Employee type | Default role(s)                |
 |---------------|--------------------------------|
-| `teacher`     | *(employee default bundle)*    |
-| `admin_staff` | *(employee default bundle)* (may add `general_hr_operator` per person) |
-| `operations`  | *(employee default bundle)*    |
+| `teacher`     | `eds_self_service`             |
+| `admin_staff` | `eds_self_service` (may add `general_hr_operator` per person) |
+| `operations`  | `eds_self_service`             |
 | `leadership`  | `executive_hr_admin`           |
-| `contractor`  | *(employee default bundle)*    |
-| `intern`      | *(employee default bundle)*    |
+| `contractor`  | `eds_self_service`             |
+| `intern`      | `eds_self_service`             |
 
-### App Admin
+> **C-16 fix:** `admin_staff`'s EDS default is `eds_self_service` (own-record only) — **not**
+> `general_hr_operator`. EDS remains available in Quick Setup, but Quick Setup applies this
+> safe default; `general_hr_operator` is an explicit per-person grant only.
+
+### NSC App Admin
 
 | Employee type | Default role(s)                                            |
 |---------------|------------------------------------------------------------|
@@ -431,8 +502,8 @@ employee_support_program       -- separate assignable cross-program coverage lis
   program_function     TEXT
 
 portal
-  key                  TEXT PK  -- supplies / eds / appadmin / events / sims / ...
-  display_name         TEXT
+  key                  TEXT PK  -- supplies / eds / nsc-app-admin / events / sims
+  display_name         TEXT     -- case-sensitive (Supplies, NSC App Admin, Employee Data System, ...)
   lifecycle_status     ENUM(active, planned, read_only)
 
 permission
@@ -448,7 +519,7 @@ role_permission                -- roles are bundles of permissions
   role_key       FK
   permission_id  FK
 
-portal_default_access_rule     -- Layer 3 (Role Templates tab)
+portal_default_access_rule     -- Layer 3 (Selection Matrix tab; the initial state)
   portal_key     FK
   employee_type  ENUM
   role_key       FK
@@ -484,18 +555,23 @@ The two things that work today must be preserved:
 1. **Supplies self-approval guardrail.** Re-expressed as
    `approver_id != created_by` on `supplies.order.approve`, enforced by a Postgres trigger,
    exempting only `super_admin_override` (alerted). No functional regression.
-2. **New School Connect lockdown.** Re-expressed as: no employee type receives App Admin
+2. **New School Connect lockdown.** Re-expressed as: no employee type receives NSC App Admin
    access by default; `admin_staff` may be granted `nsc_operations_admin` per person;
    `leadership` defaults to `app_access_admin`. Sensitivity is preserved by keeping
-   technical permissions (`appadmin.config/security/audit/messaging/override`) out of every
-   non-super-admin role.
+   technical permissions (`nsc-app-admin.config/security/audit/messaging/override`) out of
+   every non-super-admin role.
 
 **Mechanical changes:**
 
-- **Deprecate `self_service_employee`**; replace with explicit EDS own-record atoms (above).
+- **Deprecate `self_service_employee`**; replace with the explicit `eds_self_service` bundle.
+- **Deprecate any generic `viewer` role**; replace with portal-specific read roles
+  (e.g., `supplies_viewer`). *(C-15)*
 - **Remove `super_admin` from every role-mapping table**; represent it only as the
   `super_admin_override` role. The directory `type` field never contains `super_admin`.
 - **Re-express each canonical role as a permission bundle** (see Role Definitions).
+- **Rename portal identifiers** to canonical values: `eds` (Employee Data System),
+  `nsc-app-admin` (NSC App Admin). The mutations `employees` and `appadmin` are retired.
+  *(C-18)*
 - **Fix erroneous directory data at the source** (e.g., classroom teachers mistyped as
   `admin_staff`): correct the Staff Directory `type`/assignment; the matrix then re-resolves
   correct defaults automatically. No per-portal manual permission edits required.
@@ -517,4 +593,8 @@ This architecture was produced by reviewing `access-control-policy-spec.md` with
 | C-07 / E-4 | Undefined program/team/ops scope                          | Two-level `Unit -> Program/Function`; union for multi-membership; scope resolved live. |
 | C-12 | Matrix vs. Staff Directory authority for type                  | Directory = identity source; matrix derives defaults; fix data at source. |
 | C-14 | `super_admin_override` as sole cross-portal key                | Accepted; treated as break-glass with leadership-only + alert + review. |
+| C-15 | Generic cross-portal `viewer` role in the UI                   | Replaced with portal-specific read roles (e.g., `supplies_viewer`); no generic `viewer`. |
+| C-16 | Quick Setup auto-granted EDS `general_hr` to `admin_staff`     | EDS default for `admin_staff` corrected to `eds_self_service`; elevated roles are explicit per-person grants. |
+| C-17 | Quick Setup vs. Selection Matrix overlap                       | Selection Matrix **defines** defaults; Quick Setup **applies** them per user; Portal Access fine-tunes. |
+| C-18 | Portal naming inconsistency (`employees`/`appadmin`)           | Canonical identifiers `eds` and `nsc-app-admin`; case-sensitive display names; mutations retired. |
 | E-5  | Mandatory vs. prompted `expires_at`                            | Prompted + warned, not hard-blocked. |
